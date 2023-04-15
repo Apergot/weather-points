@@ -1,0 +1,6 @@
+flask
+sqlalchemy
+alembic
+psycopg2
+gunicorn
+python-dotenv
