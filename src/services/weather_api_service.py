@@ -8,12 +8,13 @@ class WeatherApiService:
         self.base_url = 'https://api.weatherapi.com/v1'
 
     def search_interest_point(self, q):
-        url = f'{self.base_url}/current.json'
+        url = f'{self.base_url}/search.json'
         params = {'q': q, 'key': self.api_key}
         response = requests.get(url, params=params)
 
         if response.ok:
-            return response.json()['location']
+            content = response.json()
+            return content[0] if len(content) > 0 else None
         else:
             return None
 

@@ -13,34 +13,45 @@ def create_point():
     if 'name' not in data:
         return jsonify({'message': 'Name is required'}), 400
 
-    session = Session()
-    point = session.query(Point).filter(Point.name == data['name']).first()
-
-    if point:
-        return jsonify({'message': 'Point with given name already exists'}), 400
-
     res = WeatherApiService().search_interest_point(data['name'])
 
     if res:
-        new_point = Point(res['name'], res['country'], res['region'], res['lat'], res['lon'])
         session = Session()
+        point = session.query(Point).filter(Point.name == res['name']).first()
+
+        if point:
+            return jsonify({'message': 'Point with given name already exists'}), 400
+
+        new_point = Point(res['name'], res['country'], res['region'], res['lat'], res['lon'])
         session.add(new_point)
         session.commit()
+
         return jsonify(new_point.serialize()), 201
 
-    return jsonify({'message': 'Could not create any point with given name'}), 400
+    return jsonify({'message': 'Could not create any point with given data'}), 400
 
 
 @app.route('/api/points', methods=['GET'])
 def get_points_collection():
     session = Session()
     points = session.query(Point).all()
+    session.close()
+
+    return jsonify([point.serialize() for point in points]), 200
+
+
+@app.route('/api/points/forecasts', methods=['GET'])
+def get_points_collection_forecasts():
+    session = Session()
+    points = session.query(Point).all()
+    session.close()
 
     serialized_points = []
 
     for point in points:
         forecasts = WeatherApiService().get_current_and_next_day_forecasts(point.name)
         serialized_point = point.serialize()
+
         serialized_point['currentDay'] = {
             'avgtemp_c': forecasts[0]['day']['avgtemp_c'],
             'humidity': forecasts[0]['day']['avghumidity'],
@@ -58,36 +69,6 @@ def get_points_collection():
     return jsonify(serialized_points), 200
 
 
-@app.route('/api/points/<uuid>', methods=['GET'])
-def get_point(uuid):
-    session = Session()
-    point = session.query(Point).filter(Point.uuid == uuid).first()
-
-    if not point:
-        return jsonify({'message': 'Point not found'}), 404
-
-    return jsonify(point.serialize()), 200
-
-
-@app.route('/api/points/<uuid>', methods=['PUT'])
-def update_point(uuid):
-    session = Session()
-    point = session.query(Point).filter(Point.uuid == uuid).first()
-
-    if not point:
-        return jsonify({'message': 'Point not found'}), 404
-
-    data = request.get_json()
-
-    for field in ['name', 'country', 'region', 'lat', 'lon']:
-        if field in data:
-            setattr(point, field, data[field])
-
-    session.commit()
-
-    return jsonify(point.serialize()), 200
-
-
 @app.route('/api/points/<uuid>', methods=['DELETE'])
 def delete_point(uuid):
     session = Session()
@@ -98,11 +79,6 @@ def delete_point(uuid):
 
     session.delete(point)
     session.commit()
+    session.close()
 
     return '', 204
-
-
-@app.route('/search', methods=['GET'])
-def get_forecasts():
-    res = WeatherApiService().get_current_and_next_day_forecasts('Gran Canaria')
-    return jsonify(res), 200
