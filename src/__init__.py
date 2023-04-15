@@ -1,19 +1,34 @@
 from flask import Flask, jsonify, request
 from src.database import Session
 from src.model import Point
+from src.services.weather_api_service import WeatherApiService
 
 app = Flask(__name__)
 
 
 @app.route('/api/points', methods=['POST'])
 def create_point():
-    # TODO: validate json content (probably not needed)
     data = request.get_json()
-    new_point = Point(data['name'], data['country'], data['region'], data['lat'], data['lon'])
+
+    if 'name' not in data:
+        return jsonify({'message': 'Name is required'}), 400
+
     session = Session()
-    session.add(new_point)
-    session.commit()
-    return jsonify(new_point.serialize()), 201
+    point = session.query(Point).filter(Point.name == data['name']).first()
+
+    if point:
+        return jsonify({'message': 'Point with given name already exists'}), 400
+
+    res = WeatherApiService().search_interest_point(data['name'])
+
+    if res:
+        new_point = Point(res['name'], res['country'], res['region'], res['lat'], res['lon'])
+        session = Session()
+        session.add(new_point)
+        session.commit()
+        return jsonify(new_point.serialize()), 201
+
+    return jsonify({'message': 'Could not create any point with given name'}), 400
 
 
 @app.route('/api/points', methods=['GET'])

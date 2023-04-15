@@ -12,7 +12,7 @@ class Point(Base):
 
     id = Column(INTEGER(), primary_key=True)
     uuid = Column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid.uuid4)
-    name = Column(String(255))
+    name = Column(String(255), unique=True)
     country = Column(String(255))
     region = Column(String(255))
     lat = Column(Float)
