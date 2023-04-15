@@ -36,7 +36,26 @@ def get_points_collection():
     session = Session()
     points = session.query(Point).all()
 
-    return jsonify([point.serialize() for point in points]), 200
+    serialized_points = []
+
+    for point in points:
+        forecasts = WeatherApiService().get_current_and_next_day_forecasts(point.name)
+        serialized_point = point.serialize()
+        serialized_point['currentDay'] = {
+            'avgtemp_c': forecasts[0]['day']['avgtemp_c'],
+            'humidity': forecasts[0]['day']['avghumidity'],
+            'totalprecip_mm': forecasts[0]['day']['totalprecip_mm']
+        }
+
+        serialized_point['nextDay'] = {
+            'avgtemp_c': forecasts[1]['day']['avgtemp_c'],
+            'humidity': forecasts[1]['day']['avghumidity'],
+            'totalprecip_mm': forecasts[1]['day']['totalprecip_mm']
+        }
+
+        serialized_points.append(serialized_point)
+
+    return jsonify(serialized_points), 200
 
 
 @app.route('/api/points/<uuid>', methods=['GET'])
@@ -81,3 +100,9 @@ def delete_point(uuid):
     session.commit()
 
     return '', 204
+
+
+@app.route('/search', methods=['GET'])
+def get_forecasts():
+    res = WeatherApiService().get_current_and_next_day_forecasts('Gran Canaria')
+    return jsonify(res), 200

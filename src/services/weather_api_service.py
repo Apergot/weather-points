@@ -17,5 +17,15 @@ class WeatherApiService:
         else:
             return None
 
+    def get_current_and_next_day_forecasts(self, q):
+        url = f'{self.base_url}/forecast.json'
+        params = {'q': q, 'key': self.api_key, 'days': 2}
+        response = requests.get(url, params=params)
+
+        if response.ok:
+            return response.json()['forecast']['forecastday']
+        else:
+            return None
+
 
 
