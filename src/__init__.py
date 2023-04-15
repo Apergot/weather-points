@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from src.database import Session
 from src.model import Point
 from src.services.weather_api_service import WeatherApiService
+import uuid
 
 app = Flask(__name__)
 
@@ -69,10 +70,15 @@ def get_points_collection_forecasts():
     return jsonify(serialized_points), 200
 
 
-@app.route('/api/points/<uuid>', methods=['DELETE'])
-def delete_point(uuid):
+@app.route('/api/points/<param_uuid>', methods=['DELETE'])
+def delete_point(param_uuid):
+    try:
+        uuid.UUID(param_uuid, version=4)
+    except ValueError:
+        return jsonify({'message': 'Invalid uuid format provided'}), 400
+
     session = Session()
-    point = session.query(Point).filter(Point.uuid == uuid).first()
+    point = session.query(Point).filter(Point.uuid == param_uuid).first()
 
     if not point:
         return jsonify({'message': 'Point not found'}), 404
